@@ -9,6 +9,7 @@ export default {
     webSocket: `${baseWebSocket}`,
     version: `${baseRestApi}/version`,
     profiles: `${baseRestApi}/profiles`,
+    clusters: `${baseRestApi}/clusters`,
     brokers: `${baseRestApi}/brokers`,
     logs: `${baseRestApi}/logs`,
     listTopics: `${baseRestApi}/listTopics`,

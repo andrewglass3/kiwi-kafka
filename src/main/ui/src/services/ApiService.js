@@ -1,6 +1,8 @@
 import api from "./ApiConfig";
 import {toast} from "react-toastify";
 
+var activeCluster = null;
+
 const doubleEncode = (param) => {
     return encodeURIComponent(encodeURIComponent(param))
 };
@@ -17,6 +19,33 @@ const statusHandler = (response) => {
     else{
         throw new Error(`${response.status} Error response from Server`);
     }
+};
+
+const wrapGetWithBrokers = (api, params) => {
+    params = params ? activeCluster ? `&${params}` : `?${params}` : '';
+    return activeCluster ? `${api}?bootStrapServers=${activeCluster}${params}` : `${api}${params}`;
+};
+
+const wrapPostWithBrokers = (request) => {
+    return activeCluster ? Object.assign(request, {'bootStrapServers':activeCluster}) : request;
+};
+
+export const setActiveCluster = (brokers) => {
+    activeCluster = brokers;
+};
+
+export const getActiveCluster = () => {
+    return activeCluster;
+}
+
+export const getClusters = (cb, eb) => {
+    let errorhandler = (error) => (eb||errorHandler)(error);
+
+    fetch(api.clusters)
+        .then(statusHandler)
+        .then(res => res.json())
+        .then(result => cb(result))
+        .catch(errorhandler);
 };
 
 export const getVersion = (cb, eb) => {
@@ -42,7 +71,7 @@ export const getProfiles = (cb, eb) => {
 export const getTopics = (cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    return fetch(api.listTopics)
+    return fetch(wrapGetWithBrokers(api.listTopics))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.topics))
@@ -52,7 +81,7 @@ export const getTopics = (cb, eb) => {
 export const getTopicInfo = (topic, cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.topicInfo}/${doubleEncode(topic)}`)
+    fetch(wrapGetWithBrokers(`${api.topicInfo}/${doubleEncode(topic)}`))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result))
@@ -62,7 +91,7 @@ export const getTopicInfo = (topic, cb, eb) => {
 export const getBrokers = (cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(api.brokers)
+    fetch(wrapGetWithBrokers(api.brokers))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.brokerInfo))
@@ -72,7 +101,7 @@ export const getBrokers = (cb, eb) => {
 export const getLogs = (id, cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.logs}?brokerId=${doubleEncode(id)}`)
+    fetch(wrapGetWithBrokers(api.logs, `brokerId=${doubleEncode(id)}`))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.brokerLogInfo))
@@ -82,7 +111,7 @@ export const getLogs = (id, cb, eb) => {
 export const getAllConsumerGroupDetails = (cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(api.listConsumerGroupTopicDetails)
+    fetch(wrapGetWithBrokers(api.listConsumerGroupTopicDetails))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.topicDetails))
@@ -92,7 +121,7 @@ export const getAllConsumerGroupDetails = (cb, eb) => {
 export const getConsumerGroups = (cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.listConsumerGroups}`)
+    fetch(wrapGetWithBrokers(api.listConsumerGroups))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.groups))
@@ -103,7 +132,7 @@ export const getConsumerGroups = (cb, eb) => {
 export const deleteConsumerGroup = (groupId, cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.deleteConsumerGroup}/${doubleEncode(groupId)}`, {
+    fetch(wrapGetWithBrokers(`${api.deleteConsumerGroup}/${doubleEncode(groupId)}`), {
         method: 'DELETE',
     })
     .then(statusHandler)
@@ -119,21 +148,21 @@ export const updateTopicConfig = (topic, config, cb, eb) => {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
+        body: JSON.stringify(wrapPostWithBrokers({
             requestType: ".UpdateTopicConfig",
             topic: topic,
             config: config
-        })
+        }))
     })
-        .then(statusHandler)
-        .then(() => cb())
-        .catch(errorhandler);
+    .then(statusHandler)
+    .then(() => cb())
+    .catch(errorhandler);
 };
 
 export const getConsumerGroupsForTopic = (topic, cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.consumerGroupsForTopic}/${doubleEncode(topic)}`)
+    fetch(wrapGetWithBrokers(`${api.consumerGroupsForTopic}/${doubleEncode(topic)}`))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.groups))
@@ -144,7 +173,7 @@ export const getConsumerGroupsForTopic = (topic, cb, eb) => {
 export const getConsumerGroupDetailsWithOffsets = (groupdId, cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.listConsumerGroupDetailsWithOffsets}/${doubleEncode(groupdId)}`)
+    fetch(wrapGetWithBrokers(`${api.listConsumerGroupDetailsWithOffsets}/${doubleEncode(groupdId)}`))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.offsets))
@@ -154,7 +183,7 @@ export const getConsumerGroupDetailsWithOffsets = (groupdId, cb, eb) => {
 export const getCreateTopicConfig = (cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(api.createTopicConfig)
+    fetch(wrapGetWithBrokers(api.createTopicConfig))
         .then(statusHandler)
         .then(res => res.json())
         .then(result => cb(result.configOptions))
@@ -171,7 +200,7 @@ export const createTopic = (topicData, cb, eb) => {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(topicData)
+        body: JSON.stringify(wrapPostWithBrokers(topicData))
     })
     .then(statusHandler)
     .then(() => cb())
@@ -181,7 +210,7 @@ export const createTopic = (topicData, cb, eb) => {
 export const deleteTopic = (topic, cb, eb) => {
     let errorhandler = (error) => (eb||errorHandler)(error);
 
-    fetch(`${api.deleteTopic}/${doubleEncode(topic)}`, {
+    fetch(wrapGetWithBrokers(`${api.deleteTopic}/${doubleEncode(topic)}`), {
         method: 'DELETE',
     })
     .then(statusHandler)
@@ -205,13 +234,13 @@ export const produce = (topic, key, value, headers, cb, eb) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
+            body: JSON.stringify(wrapPostWithBrokers({
                 requestType: ".ProducerRequest",
                 topic: topic,
                 key: key,
                 headers: headers||{},
                 payload: value||null
-            })
+            }))
         })
         .then(statusHandler)
         .then(res => res.json())
@@ -233,13 +262,13 @@ export const consume = (topics, limit, fromStart, filters, cb, eb) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
+            body: JSON.stringify(wrapPostWithBrokers({
                 requestType: ".ConsumerRequest",
                 topics: topics,
                 limit: limit||1,
                 limitAppliesFromStart: fromStart||false,
                 filters: filters || []
-            })
+            }))
         })
         .then(statusHandler)
         .then(res => res.json())
@@ -255,7 +284,7 @@ export const consumeToFile = (topics, filters, fileType, columns, separator, eb)
         errorhandler(new Error("Topic must be defined to consume from kafka"));
     }
     else{
-        let data = JSON.stringify({
+        let data = JSON.stringify(wrapPostWithBrokers({
             requestType: ".ConsumerToFileRequest",
             topics: topics,
             limit: -1,
@@ -264,7 +293,7 @@ export const consumeToFile = (topics, filters, fileType, columns, separator, eb)
             fileType: fileType,
             columns: columns,
             separator: separator
-        });
+        }));
         let encoded = window.btoa(data);
         let request = `${api.consumeToFile}?request=${encodeURIComponent(encoded)}`;
         window.open(request, "_blank");

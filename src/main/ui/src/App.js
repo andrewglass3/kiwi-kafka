@@ -52,6 +52,17 @@ class App extends Component {
                 })
             }
         }, () => toast.error("No connection to server"));
+
+        ApiService.getClusters((clusters) => {
+            if(this.mounted){
+                if(clusters.default){
+                    ApiService.setActiveCluster(clusters.default.join());
+                }
+                this.setState({
+                    clusters: clusters
+                })
+            }
+        }, () => toast.error("No connection to server"));
     }
 
     componentWillUnmount() {

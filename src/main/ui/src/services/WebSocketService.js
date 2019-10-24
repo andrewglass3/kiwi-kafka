@@ -1,4 +1,5 @@
 import WebSocketFactory from "./WebSocketFactory";
+import * as ApiService from "./ApiService";
 
 
 //TODO WIP POC
@@ -72,12 +73,14 @@ WebSocketService.consume = (topics, filters, startPosition, messageHandler, erro
         closeHandler();
     };
 
+
     WebSocketService.send({
         requestType: ".ConsumerRequest",
         topics: topics,
         limit: -1,
         filters: filters || [],
-        consumerStartPosition : startPosition < 0.1 ? null : {topicPercentage: startPosition}
+        consumerStartPosition : startPosition < 0.1 ? null : {topicPercentage: startPosition},
+        bootstrapServers:ApiService.getActiveCluster()
     }, errorHandler);
 };
 
